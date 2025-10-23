@@ -1,0 +1,7 @@
+{
+    "version": "v1",
+    "accuracy": 0.982741117477417,
+    "architecture": "resnet101",
+    "image_size": 224,
+    "timestamp": "20251023-2013"
+}

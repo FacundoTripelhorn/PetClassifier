@@ -1,0 +1,31 @@
+[project]
+name="petclassifier"
+version="0.1.0"
+description="FastAPI + FastAI pet breed classifier"
+requires-python=">=3.10"
+
+[tool.taskipy.tasks]
+# 🧩 === Virtual environment ===
+create="python -m venv .venv"
+activate=".venv\\Scripts\\activate"
+deactivate="deactivate"
+install="pip install -r requirements.txt"
+
+# 🚀 === Project commands ===
+serve="uvicorn app.main:app --reload --port 8000"
+ui = "streamlit run ui/dashboard.py"
+run="python run.py"
+train="python scripts/train.py"
+test="pytest -v"
+lint="ruff check ."
+format="ruff format ."
+
+# 🧰 === Docker ===
+dockerbuild="docker build -t petclassifier ."
+dockerrun="docker run -p 8000:8000 petclassifier"
+
+# 📊 === Development ===
+dev="python run.py"
+coverage="pytest --cov=app --cov-report=html"
+format-check="ruff format --check ."
+lint-fix="ruff check --fix ."
