@@ -3,8 +3,6 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.settings import settings
-from app.utils import validate_image_size, load_pil_from_bytes, load_pil_from_base64
-from app.schemas import PredictB64Request, PredictResponse
 from app.inference import PetClassifier
 
 # Configure logging
@@ -56,58 +54,9 @@ def health():
         'api_version': '1.0.0'
     }
 
-@app.post('/predict', response_model=PredictResponse, tags=['predict'], 
-          summary='Predict Pet Breed', 
-          description='Upload an image file to predict the pet breed')
-async def predict_multipart(file: UploadFile = File(..., description="Image file (JPG, PNG, etc.)")):
-    """
-    Predict the breed of a pet from an uploaded image.
-    
-    - **file**: Image file to classify (max 8MB)
-    
-    Returns the predicted breed with confidence score and top-k predictions.
-    """
-    if classifier is None:
-        raise HTTPException(status_code=503, detail="Model not loaded")
-    
-    try:
-        b = await file.read()
-        validate_image_size(b, settings.MAX_IMAGE_MB)
-        img = load_pil_from_bytes(b)
-        
-        log.info(f"Processing image: {file.filename}, size: {len(b)} bytes")
-        label, prob, topk_labels, topk_probs = classifier.predict_pet(img)
-        return PredictResponse(label=label, probability=prob, topk_labels=topk_labels, topk_probs=topk_probs)
-    except ValueError as ve:
-        log.warning(f"Validation error: {ve}")
-        raise HTTPException(status_code=413, detail=str(ve))
-    except Exception as e:
-        log.exception('Prediction error')
-        raise HTTPException(status_code=500, detail=f'Prediction failed: {str(e)}')
-
-@app.post('/predict-base64', response_model=PredictResponse, tags=['predict'],
-          summary='Predict Pet Breed (Base64)', 
-          description='Predict pet breed from a base64-encoded image')
-def predict_base64(request: PredictB64Request):
-    """
-    Predict the breed of a pet from a base64-encoded image.
-    
-    - **image_base64**: Base64-encoded image string
-    
-    Returns the predicted breed with confidence score and top-k predictions.
-    """
-    if classifier is None:
-        raise HTTPException(status_code=503, detail="Model not loaded")
-    
-    try:
-        img = load_pil_from_base64(request.image_base64)
-        
-        log.info(f"Processing base64 image, size: {len(request.image_base64)} chars")
-        label, prob, topk_labels, topk_probs = classifier.predict_pet(img)
-        return PredictResponse(label=label, probability=prob, topk_labels=topk_labels, topk_probs=topk_probs)
-    except ValueError as ve:
-        log.warning(f"Validation error: {ve}")
-        raise HTTPException(status_code=413, detail=str(ve))
-    except Exception as e:
-        log.exception('Prediction error')
-        raise HTTPException(status_code=500, detail=f'Prediction failed: {str(e)}')
+@app.post('/predict', tags=['predict'], summary='Predict pet breed from image', description='Predict pet breed from image')
+async def predict(file: UploadFile = File(...)):
+    contents = await file.read()
+    pred = classifier.learn.predict(contents)
+    log.info(pred)
+    return {"prediction": pred}

@@ -285,7 +285,8 @@ if uploaded_file:
                 <strong>💡 Tips for better results:</strong><br>
                 • Make sure the image is clear and well-lit<br>
                 • Try to get a good view of your pet's face and body<br>
-                • Ensure your pet is the main subject of the photo
+                • Ensure your pet is the main subject of the photo<br>
+                • Supported formats: JPG, JPEG, PNG
             </div>
             """, unsafe_allow_html=True)
 

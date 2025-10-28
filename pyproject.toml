@@ -13,7 +13,7 @@ install="pip install -r requirements.txt"
 
 # 🚀 === Project commands ===
 serve="uvicorn app.main:app --reload --port 8000"
-ui = "streamlit run ui/dashboard.py"
+ui = "streamlit run ui/simple_dashboard.py"
 run="python run.py"
 train="python scripts/train.py"
 test="pytest -v"
