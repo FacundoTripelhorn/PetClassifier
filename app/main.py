@@ -55,8 +55,11 @@ def health():
     }
 
 @app.post('/predict', tags=['predict'], summary='Predict pet breed from image', description='Predict pet breed from image')
-async def predict(file: UploadFile = File(...)):
-    contents = await file.read()
-    pred = classifier.learn.predict(contents)
-    log.info(pred)
-    return {"prediction": pred}
+async def predict(file: UploadFile = File(...), topk: int = 5):
+    if classifier is None:
+        raise HTTPException(status_code=503, detail='Model not loaded')
+
+    result = await classifier.predict_pet(file, topk=topk)
+    pred = result.get('prediction', {})
+    log.info("Predicted %s (%.2f%%)", pred.get('label', 'unknown'), pred.get('confidence', 0.0) * 100)
+    return JSONResponse(content=result)
