@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     PURITY_THRESHOLD: float = 0.7
     MARGIN_THRESHOLD: float = 0.2
     TTA_N_AUGMENTATIONS: int = 8
-    MODEL_REPO: str = "https://huggingface.co/Faculo/petclassifier/"
+    MODEL_REPO: str = "Faculo/petclassifier"
     
     model_config = SettingsConfigDict(env_file=".env")
 

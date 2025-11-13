@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "FacundoTripelhorn", email = ""}
+    {name = "FacundoTripelhorn", email = "facundo.tripelhorn@gmail.com"}
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -72,3 +72,8 @@ target-version = "py310"
 select = ["E", "F", "I", "N", "W"]
 ignore = ["E501"]
 
+[tool.taskipy.tasks]
+install = "pip install -e ."
+serve = "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+ui = "streamlit run ui/simple_dashboard.py"
+run = "python run.py"
