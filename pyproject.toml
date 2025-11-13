@@ -1,31 +1,74 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name="petclassifier"
-version="0.1.0"
-description="FastAPI + FastAI pet breed classifier"
-requires-python=">=3.10"
+name = "petclassifier"
+version = "0.1.0"
+description = "FastAPI + FastAI pet breed classifier"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "FacundoTripelhorn", email = ""}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "fastai==2.8.4",
+    "torch==2.6.0",
+    "torchvision==0.21.0",
+    "fasttransform==0.0.2",
+    "plum-dispatch==2.5.8",
+    "beartype==0.22.3",
+    "fastapi==0.116.1",
+    "uvicorn[standard]==0.32.1",
+    "python-multipart>=0.0.9",
+    "pydantic==2.11.7",
+    "pydantic-settings==2.11.0",
+    "streamlit==1.37.1",
+    "plotly==5.24.1",
+    "pillow==10.4.0",
+    "cloudpickle==3.0.0",
+    "taskipy==1.12.0",
+    "huggingface-hub>=0.20.0",
+    "requests>=2.31.0",
+]
 
-[tool.taskipy.tasks]
-# 🧩 === Virtual environment ===
-create="python -m venv .venv"
-activate=".venv\\Scripts\\activate"
-deactivate="deactivate"
-install="pip install -r requirements.txt"
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0",
+    "ruff>=0.1.0",
+]
 
-# 🚀 === Project commands ===
-serve="uvicorn app.main:app --reload --port 8000"
-ui = "streamlit run ui/simple_dashboard.py"
-run="python run.py"
-train="python scripts/train.py"
-test="pytest -v"
-lint="ruff check ."
-format="ruff format ."
+[project.urls]
+Homepage = "https://github.com/Faculo/petclassifier"
+Repository = "https://github.com/Faculo/petclassifier"
 
-# 🧰 === Docker ===
-dockerbuild="docker build -t petclassifier ."
-dockerrun="docker run -p 8000:8000 petclassifier"
+[tool.setuptools]
+packages = ["app", "ui", "utils"]
 
-# 📊 === Development ===
-dev="python run.py"
-coverage="pytest --cov=app --cov-report=html"
-format-check="ruff format --check ."
-lint-fix="ruff check --fix ."
+[tool.setuptools.package-data]
+"*" = ["*.txt", "*.md"]
+
+[tool.black]
+line-length = 100
+target-version = ['py310', 'py311', 'py312']
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]
+

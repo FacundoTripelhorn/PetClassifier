@@ -7,7 +7,13 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
+    TOPK_MIX: int = 3
+    PURITY_THRESHOLD: float = 0.7
+    MARGIN_THRESHOLD: float = 0.2
+    TTA_N_AUGMENTATIONS: int = 8
+    MODEL_REPO: str = "https://huggingface.co/Faculo/petclassifier/"
     
     model_config = SettingsConfigDict(env_file=".env")
 
 settings = Settings()
+
