@@ -3,7 +3,14 @@ import requests
 from io import BytesIO
 from PIL import Image
 from pathlib import Path
-import json
+
+from ui.api_client import fetch_models
+from ui.session_state import (
+    get_selected_model,
+    set_selected_model,
+    get_selected_inference_type,
+    set_selected_inference_type,
+)
 
 # Page configuration
 st.set_page_config(
@@ -26,6 +33,10 @@ if 'prediction_result' not in st.session_state:
     st.session_state.prediction_result = None
 if 'uploaded_image' not in st.session_state:
     st.session_state.uploaded_image = None
+if 'selected_model' not in st.session_state:
+    set_selected_model(None)
+if 'selected_inference_type' not in st.session_state:
+    set_selected_inference_type("mix")
 
 # Header
 st.markdown("""
@@ -39,6 +50,58 @@ st.markdown("""
 with st.sidebar:
     st.header("⚙️ Settings")
     topk = st.slider("Number of top predictions", min_value=3, max_value=10, value=5)
+
+    st.subheader("🤖 Model")
+    models = fetch_models()
+    selected_model_path = get_selected_model()
+
+    if models:
+        model_options = ["Default (auto-select)"]
+        model_paths = {"Default (auto-select)": None}
+        default_index = 0
+
+        for idx, model in enumerate(models, start=1):
+            display_name = model.get("name", model.get("path", "Unknown"))
+            folder = model.get("folder")
+            if folder and folder != "root":
+                display_name = f"{folder}/{display_name}"
+            model_options.append(display_name)
+            model_paths[display_name] = model.get("path")
+            if model.get("path") == selected_model_path:
+                default_index = idx
+
+        selected_display = st.selectbox(
+            "Select Model",
+            options=model_options,
+            index=default_index,
+            help="Choose which model checkpoint to use for inference",
+        )
+        set_selected_model(model_paths[selected_display])
+        selected_model_path = model_paths[selected_display]
+    else:
+        st.warning("No models available in the API response.")
+        set_selected_model(None)
+        selected_model_path = None
+
+    st.subheader("🔬 Inference")
+    inference_types = {
+        "base": "Base",
+        "tta": "TTA (augmentations)",
+        "mix": "Mix (base + TTA)",
+        "ensemble": "Ensemble",
+        "multitask": "Multitask",
+    }
+    current_inference = get_selected_inference_type()
+    type_keys = list(inference_types.keys())
+    selected_type = st.selectbox(
+        "Select Inference Type",
+        options=type_keys,
+        format_func=lambda key: inference_types[key],
+        index=type_keys.index(current_inference) if current_inference in type_keys else type_keys.index("mix"),
+        help="Switch how predictions are generated",
+    )
+    set_selected_inference_type(selected_type)
+
     st.markdown("---")
     st.markdown("""
     ### 📝 About
@@ -78,9 +141,21 @@ with col1:
                     st.session_state.uploaded_image.save(img_bytes, format='PNG')
                     img_bytes.seek(0)
                     
-                    # Make API call
+                    # Make API call with selected model and inference type
                     files = {'file': ('image.png', img_bytes, 'image/png')}
-                    response = requests.post(f"{API_URL}?topk={topk}", files=files, timeout=30)
+                    params = {
+                        "topk": topk,
+                        "inference_type": get_selected_inference_type(),
+                    }
+                    if selected_model_path:
+                        params["model_path"] = selected_model_path
+
+                    response = requests.post(
+                        API_URL,
+                        files=files,
+                        params=params,
+                        timeout=30,
+                    )
                     
                     if response.status_code == 200:
                         result = response.json()
@@ -106,7 +181,11 @@ with col2:
         pred = result.get("prediction", {})
         label = pred.get("label", "Unknown")
         conf = pred.get("confidence", 0.0)
+        # Clamp confidence to [0, 1] range for display
+        conf = max(0.0, min(1.0, float(conf)))
         conf_percent = conf * 100
+        model_used = result.get("model_path") or "Default (auto-select)"
+        inference_used = result.get("inference_type", get_selected_inference_type()).title()
         
         # Main result card
         st.markdown(f"""
@@ -115,10 +194,13 @@ with col2:
             <div class="confidence-box">
                 <strong>Confidence:</strong> {conf_percent:.2f}%
             </div>
+            <div style="margin-top:0.5rem;font-size:0.9rem;color:#5f6b7c;">
+                <strong>Model:</strong> {model_used} | <strong>Inference:</strong> {inference_used}
+            </div>
         </div>
         """, unsafe_allow_html=True)
         
-        # Progress bar for confidence
+        # Progress bar for confidence (ensure value is in [0, 1])
         st.progress(conf, text=f"Confidence: {conf_percent:.1f}%")
         
         # Metrics
@@ -135,7 +217,10 @@ with col2:
             
             for i, item in enumerate(top_k, start=1):
                 item_label = item.get('label', 'Unknown')
-                item_conf = item.get('confidence', 0.0) * 100
+                item_conf_raw = item.get('confidence', 0.0)
+                # Clamp confidence to [0, 1] range
+                item_conf_raw = max(0.0, min(1.0, float(item_conf_raw)))
+                item_conf = item_conf_raw * 100
                 is_top = i == 1
                 
                 # Create prediction item
@@ -153,7 +238,7 @@ with col2:
                     
                     with item_col3:
                         st.markdown(f"**{item_conf:.1f}%**")
-                        st.progress(item_conf / 100)
+                        st.progress(item_conf_raw)
                     
                     st.markdown("---")
     else:

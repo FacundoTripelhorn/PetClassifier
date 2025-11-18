@@ -5,6 +5,7 @@ from app.inference.base_inference import BaseInference
 from app.inference.tta_inference import TTAInference
 from app.inference.mix_inference import MixInference
 from app.inference.ensemble_inference import EnsembleInference
+from app.inference.multitask_inference import MultitaskInference
 
 
 class InferenceFactory:
@@ -15,6 +16,7 @@ class InferenceFactory:
         "tta": TTAInference,
         "mix": MixInference,
         "ensemble": EnsembleInference,
+        "multitask": MultitaskInference,
     }
     
     @classmethod

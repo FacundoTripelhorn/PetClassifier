@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    sync_hf_models(settings.MODEL_REPO, patterns=("*.pkl"), prune=True)
+    sync_hf_models(settings.MODEL_REPO, patterns=("*.pkl","*.json"), prune=True)
     yield
 
 
@@ -96,10 +96,25 @@ def get_classifier(model_path: str, inference_type: str):
     
     # Create full path for non-ensemble types
     if inference_type != "ensemble":
+        # Validate model_path is not empty or just a directory name
+        if not model_path or model_path.strip() == "":
+            raise ValueError("model_path cannot be empty")
+        
+        # Remove leading slash if present
+        model_path = model_path.lstrip("/")
+        
         full_path = MODELS_DIR / model_path
+        
+        # Validate it's a file, not a directory
         if not full_path.exists():
             raise FileNotFoundError(f"Model file not found: {full_path}")
+        if full_path.is_dir():
+            raise ValueError(f"Path is a directory, not a file: {full_path}")
+        if not full_path.is_file():
+            raise ValueError(f"Path is not a valid file: {full_path}")
+        
         model_path_str = str(full_path)
+        log.info(f"Loading model from: {model_path_str}")
     else:
         model_path_str = None
     
@@ -172,12 +187,12 @@ def health():
 async def predict(
     file: UploadFile = File(...), 
     topk: int = 5,
-    inference_type: str = Query("mix", description="Inference type: base, tta, mix, or ensemble"),
+    inference_type: str = Query("mix", description="Inference type: base, tta, mix, ensemble, or multitask"),
     model_path: Optional[str] = Query(None, description="Path to model file (relative to models/). If not provided, uses default.")
 ):
     """Predict pet breed using the specified inference type and model."""
     # Validate inference type
-    valid_types = ["base", "tta", "mix", "ensemble"]
+    valid_types = ["base", "tta", "mix", "ensemble", "multitask"]
     if inference_type not in valid_types:
         raise HTTPException(
             status_code=400, 
@@ -192,14 +207,25 @@ async def predict(
     if model_path is None:
         # Try to use the default model from settings, or first available model
         default_path = settings.MODEL_PATH
-        if pathlib.Path(default_path).exists():
-            model_path = str(pathlib.Path(default_path).relative_to(MODELS_DIR))
+        default_path_obj = pathlib.Path(default_path)
+        if default_path_obj.exists() and default_path_obj.is_file():
+            try:
+                model_path = str(default_path_obj.relative_to(MODELS_DIR))
+            except ValueError:
+                # If default_path is not relative to MODELS_DIR, use it as-is
+                model_path = default_path
         else:
             models = discover_models()
             if not models:
                 raise HTTPException(status_code=503, detail="No models available")
             model_path = models[0]["path"]
             log.info(f"Using first available model: {model_path}")
+    
+    # Validate model_path is set
+    if not model_path or model_path.strip() == "":
+        raise HTTPException(status_code=400, detail="model_path is required or no models available")
+    
+    log.info(f"Request: inference_type={inference_type}, model_path={model_path}")
     
     try:
         classifier = get_classifier(model_path, inference_type)
@@ -247,7 +273,7 @@ async def compare_all(
     file_content_type = file.content_type or "image/jpeg"
     
     # Determine which inference types to use
-    valid_types = ["base", "tta", "mix", "ensemble"]
+    valid_types = ["base", "tta", "mix", "ensemble", "multitask"]
     if inference_types:
         types_to_compare = [t.strip() for t in inference_types.split(",")]
         types_to_compare = [t for t in types_to_compare if t in valid_types]
